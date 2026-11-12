@@ -27,15 +27,21 @@
             </span>
             <span class="text-[10.5px] num">{{ tableStore.items.length }}</span>
           </RouterLink>
-          <RouterLink to="/jobs" class="rail-link" active-class="active">
+          <RouterLink to="/orchestrations" class="rail-link" active-class="active">
             <span class="flex items-baseline gap-2">
               <span class="rail-link__index">§02</span>
+              <span>当日跨表编排</span>
+            </span>
+          </RouterLink>
+          <RouterLink to="/jobs" class="rail-link" active-class="active">
+            <span class="flex items-baseline gap-2">
+              <span class="rail-link__index">§03</span>
               <span>任务执行监控</span>
             </span>
           </RouterLink>
           <RouterLink to="/snapshots" class="rail-link" active-class="active">
             <span class="flex items-baseline gap-2">
-              <span class="rail-link__index">§03</span>
+              <span class="rail-link__index">§04</span>
               <span>快照 diff 与校验</span>
             </span>
           </RouterLink>
@@ -59,8 +65,9 @@
         </template>
         <template v-else>
           <RouterLink to="/tables" class="rail-link !justify-center !px-0" active-class="active" title="湖表总览">§1</RouterLink>
-          <RouterLink to="/jobs" class="rail-link !justify-center !px-0" active-class="active" title="任务监控">§2</RouterLink>
-          <RouterLink to="/snapshots" class="rail-link !justify-center !px-0" active-class="active" title="快照校验">§3</RouterLink>
+          <RouterLink to="/orchestrations" class="rail-link !justify-center !px-0" active-class="active" title="跨表编排">§2</RouterLink>
+          <RouterLink to="/jobs" class="rail-link !justify-center !px-0" active-class="active" title="任务监控">§3</RouterLink>
+          <RouterLink to="/snapshots" class="rail-link !justify-center !px-0" active-class="active" title="快照校验">§4</RouterLink>
         </template>
       </nav>
 

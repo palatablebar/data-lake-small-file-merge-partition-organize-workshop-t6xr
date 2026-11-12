@@ -24,6 +24,9 @@ class ErrorCode(str, Enum):
     # auth layer
     FORBIDDEN = "LAKE-2015"
     UNAUTHORIZED = "LAKE-2016"
+    ORCHESTRATION_NOT_FOUND = "LAKE-2020"
+    ORCHESTRATION_NOT_SUBMITTABLE = "LAKE-2021"
+    ORCHESTRATION_EMPTY = "LAKE-2022"
 
 
 ERROR_MESSAGES = {
@@ -43,6 +46,9 @@ ERROR_MESSAGES = {
     ErrorCode.TABLE_PAUSED: "湖表已暂停，不能生成或执行计划",
     ErrorCode.FORBIDDEN: "当前角色无权执行该操作",
     ErrorCode.UNAUTHORIZED: "未登录或登录已过期",
+    ErrorCode.ORCHESTRATION_NOT_FOUND: "当日跨表编排不存在",
+    ErrorCode.ORCHESTRATION_NOT_SUBMITTABLE: "该编排当前状态不允许提交执行",
+    ErrorCode.ORCHESTRATION_EMPTY: "没有符合条件的分区，编排为空",
 }
 
 ERROR_STATUS = {
@@ -62,6 +68,9 @@ ERROR_STATUS = {
     ErrorCode.TABLE_PAUSED: 409,
     ErrorCode.FORBIDDEN: 403,
     ErrorCode.UNAUTHORIZED: 401,
+    ErrorCode.ORCHESTRATION_NOT_FOUND: 404,
+    ErrorCode.ORCHESTRATION_NOT_SUBMITTABLE: 409,
+    ErrorCode.ORCHESTRATION_EMPTY: 409,
 }
 
 

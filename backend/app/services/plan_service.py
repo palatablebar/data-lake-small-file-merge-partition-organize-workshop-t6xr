@@ -30,16 +30,24 @@ def cost_params() -> CostParams:
     )
 
 
-def create_plan(db: Session, user: User, payload) -> dict:
-    table = table_service.get_table_or_404(db, payload.table_id)
-    if table.status != TableStatus.ACTIVE.value:
-        raise AppError(ErrorCode.TABLE_PAUSED)
-    partitions = sorted({str(value).strip() for value in payload.partition_values if str(value).strip()})
-    if not partitions:
-        raise AppError(ErrorCode.PLAN_PARTITIONS_INVALID)
+def build_plan_result(
+    db: Session,
+    table: LakeTable,
+    partitions: list[str],
+    *,
+    refresh: bool = True,
+    strategy: str | None = None,
+    target_file_size_mb: int | None = None,
+) -> dict:
+    """Compute the FFD bin-packing result for one table from live metadata.
 
-    # refresh specs first so hot/newest partitions are evaluated on live data
-    partition_service.recompute_table(db, table)
+    Shared by the single-table API and the nightly cross-table orchestration.
+    ``refresh=False`` skips the partition-spec recompute when the caller has
+    already refreshed the table (the orchestration loop recomputes once).
+    Raises NO_SMALL_FILES when none of the partitions holds a small file.
+    """
+    if refresh:
+        partition_service.recompute_table(db, table)
     specs = (
         db.query(PartitionSpec)
         .filter(PartitionSpec.table_id == table.id, PartitionSpec.partition_value.in_(partitions))
@@ -68,7 +76,7 @@ def create_plan(db: Session, user: User, payload) -> dict:
         )
 
     hot = {spec.partition_value for spec in specs if spec.risk == "hot"}
-    strategy = payload.strategy or ("ffd_target" if payload.target_file_size_mb else "ffd_256")
+    resolved_strategy = strategy or ("ffd_target" if target_file_size_mb else "ffd_256")
     result = build_plan(
         table={
             "db_name": table.db_name,
@@ -79,22 +87,18 @@ def create_plan(db: Session, user: User, payload) -> dict:
             "bucket": settings.LAKE_BUCKET,
         },
         partition_files=partition_files,
-        strategy=strategy,
-        target_file_size_mb=payload.target_file_size_mb,
+        strategy=resolved_strategy,
+        target_file_size_mb=target_file_size_mb,
         hot_partitions=hot,
         cost_params=cost_params(),
     )
     if result["candidate_file_count"] == 0:
         raise AppError(ErrorCode.NO_SMALL_FILES, detail={"partitions": partitions})
+    return result
 
-    quota = consume_plan_quota(db, user)
 
-    previous = (
-        db.query(CompactPlan)
-        .filter(CompactPlan.table_id == table.id, CompactPlan.fingerprint == result["fingerprint"])
-        .order_by(CompactPlan.id.desc())
-        .first()
-    )
+def persist_plan(db: Session, table: LakeTable, result: dict, user: User | None, note: str | None) -> CompactPlan:
+    """Persist a computed bin-packing result as a draft plan."""
     plan = CompactPlan(
         table_id=table.id,
         strategy=result["strategy"],
@@ -111,10 +115,38 @@ def create_plan(db: Session, user: User, payload) -> dict:
         est_cost_yuan=float(result["cost"]["est_cost_yuan"]),
         savings_pct=float(result["savings_pct"]),
         fingerprint=result["fingerprint"],
-        note=payload.note,
-        created_by=user.id,
+        note=note,
+        created_by=user.id if user else None,
     )
     db.add(plan)
+    db.flush()
+    return plan
+
+
+def create_plan(db: Session, user: User, payload) -> dict:
+    table = table_service.get_table_or_404(db, payload.table_id)
+    if table.status != TableStatus.ACTIVE.value:
+        raise AppError(ErrorCode.TABLE_PAUSED)
+    partitions = sorted({str(value).strip() for value in payload.partition_values if str(value).strip()})
+    if not partitions:
+        raise AppError(ErrorCode.PLAN_PARTITIONS_INVALID)
+
+    result = build_plan_result(
+        db,
+        table,
+        partitions,
+        strategy=payload.strategy,
+        target_file_size_mb=payload.target_file_size_mb,
+    )
+    consume_plan_quota(db, user)
+
+    previous = (
+        db.query(CompactPlan)
+        .filter(CompactPlan.table_id == table.id, CompactPlan.fingerprint == result["fingerprint"])
+        .order_by(CompactPlan.id.desc())
+        .first()
+    )
+    plan = persist_plan(db, table, result, user, payload.note)
     db.commit()
     db.refresh(plan)
     log_event("PLAN_CREATED", plan_id=plan.id, table=f"{table.db_name}.{table.table_name}", groups=plan.group_count)

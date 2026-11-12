@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     RATE_WINDOW_SECONDS: int = 60
     RATE_WINDOW_MAX: int = 30
 
+    # --- nightly cross-table orchestration ---
+    # 固定重写预算：一次当日跨表编排最多入选的分区数；单表最多占一半。
+    ORCHESTRATION_REWRITE_BUDGET: int = 6
+    ORCHESTRATION_MAX_TABLE_RATIO: float = 0.5
+
     # --- demo seed ---
     SEED_DEMO: bool = True
 

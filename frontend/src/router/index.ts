@@ -19,6 +19,12 @@ const router = createRouter({
       component: () => import('../pages/PlanPage.vue'),
       meta: { title: '合并计划预览' },
     },
+    {
+      path: '/orchestrations',
+      name: 'orchestrations',
+      component: () => import('../pages/OrchestrationPage.vue'),
+      meta: { title: '当日跨表编排' },
+    },
     { path: '/jobs', name: 'jobs', component: () => import('../pages/JobsPage.vue'), meta: { title: '任务执行监控' } },
     {
       path: '/snapshots',

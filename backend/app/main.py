@@ -14,7 +14,7 @@ from app.middlewares.audit_logger import AuditMiddleware
 from app.middlewares.auth import AuthMiddleware
 from app.middlewares.error_handler import RequestIdMiddleware, install_error_handlers
 from app.middlewares.quota import RateLimitMiddleware
-from app.routes import audit, auth, health, job, plan, snapshot, table
+from app.routes import audit, auth, health, job, orchestration, plan, snapshot, table
 from app.utils.logger import log_event
 
 
@@ -64,6 +64,7 @@ for _prefix in ("", "/api"):
     app.include_router(auth.router, prefix=_prefix)
     app.include_router(table.router, prefix=_prefix)
     app.include_router(plan.router, prefix=_prefix)
+    app.include_router(orchestration.router, prefix=_prefix)
     app.include_router(job.router, prefix=_prefix)
     app.include_router(snapshot.router, prefix=_prefix)
     app.include_router(audit.router, prefix=_prefix)
@@ -82,6 +83,8 @@ def index() -> dict:
             "/tables/{id}/files",
             "/plans",
             "/plans/{id}/execute",
+            "/orchestrations",
+            "/orchestrations/{id}/submit",
             "/jobs",
             "/tables/{id}/snapshots",
             "/snapshots/diff",
